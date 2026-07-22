@@ -3,6 +3,7 @@ const prisma = require("../lib/prisma");
 const { requireAuth } = require("../middleware/auth");
 const { chatLimiter } = require("../middleware/rateLimit");
 const { TOOLS_SCHEMA, executeTool } = require("../lib/tools");
+const { extractAndSaveMemory } = require("../lib/memory");
 
 const router = express.Router();
 
@@ -126,10 +127,32 @@ router.post("/", requireAuth, chatLimiter, async (req, res) => {
       take: 20
     });
 
+    // Fetch this user's name and long-term memory (facts learned across all past conversations)
+    const userRecord = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { name: true, memory: true }
+    });
+
+    const isFirstMessageEver = history.length === 1; // only the message we just saved exists
+
+    const memorySection = userRecord?.memory
+      ? `\n\nUser ke baare mein ye baatein tumhein pehle se yaad hain (past conversations se seekhi hui):\n${userRecord.memory}\n\nInko naturally use karo jaha relevant ho, jaise ek purana dost baat karta hai — inko explicitly mat batao ke ye "memory" se aaya hai.`
+      : "";
+
     const groqMessages = [
       {
         role: "system",
-        content: "Tum Alexa ho, ek friendly AI assistant jo Roman Urdu mein baat karti hai jab tak user English na maange. Casual greetings, jokes, ya normal baaton ka jawab seedha do — koi tool use mat karo. SIRF tab tools (get_weather, web_search) use karo jab user clearly kisi cheez ka live/current data maangay (jaise 'aaj weather kaisa hai', 'latest news kya hai') — casual chat, greetings, ya general knowledge ke sawalon ke liye tools bilkul na use karo."
+        content: `Tum Alexa ho, ek professional aur friendly AI assistant, jo ${userRecord?.name || "user"} ke sath baat kar rahi ho.
+
+LANGUAGE RULE (bahut zaroori):
+- Agar ye bilkul pehla message hai is conversation ka aur user ne kisi language ka koi ishara nahi diya, to English mein professionally reply karo.
+- Uske baad, hamesha USER JIS LANGUAGE/STYLE mein likhe (English, Urdu script, ya Roman Urdu) usi mein reply karo — user ki language ko match karo, apni taraf se language mat thopo.
+- Agar user language switch kare (jaise Urdu se English), tum bhi turant switch kar lo.
+
+BEHAVIOR RULES:
+- Casual greetings, jokes, ya normal baaton ka jawab seedha do — koi tool use mat karo.
+- SIRF tab tools (get_weather, web_search) use karo jab user clearly kisi cheez ka live/current data maangay (jaise 'aaj weather kaisa hai', 'latest news kya hai').
+- Tone hamesha professional, warm, aur helpful rakho — kisi bhi industrial/business client ke saamne pesh karne layak.${memorySection}`
       },
       ...history.map(m => ({ role: m.role, content: m.content }))
     ];
@@ -153,6 +176,9 @@ router.post("/", requireAuth, chatLimiter, async (req, res) => {
     await prisma.message.create({
       data: { sessionId: session.id, role: "assistant", content: reply }
     });
+
+    // Learn from this message in the background — doesn't delay the response to the user
+    extractAndSaveMemory(req.user.userId, message);
 
     res.json({ status: "ok", sessionId: session.id, reply });
   } catch (err) {
