@@ -5,6 +5,7 @@ const prisma = require("./lib/prisma");
 const authRoutes = require("./routes/auth");
 const chatRoutes = require("./routes/chat");
 const generateRoutes = require("./routes/generate");
+const adminRoutes = require("./routes/admin");
 const { requireAuth } = require("./middleware/auth");
 const { generalLimiter, authLimiter } = require("./middleware/rateLimit");
 
@@ -53,6 +54,9 @@ app.use("/api/chat", chatRoutes);
 
 // Generic AI routes: /api/ai/generate (used by resume, email, and other one-shot tools)
 app.use("/api/ai", generateRoutes);
+
+// Admin-only routes: /api/admin/users (real analytics dashboard data)
+app.use("/api/admin", adminRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

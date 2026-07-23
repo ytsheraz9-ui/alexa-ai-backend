@@ -71,6 +71,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Email ya password ghalat hai." });
     }
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    });
+
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
