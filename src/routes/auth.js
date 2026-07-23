@@ -14,15 +14,15 @@ router.post("/signup", async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, aur password teeno zaroori hain." });
+      return res.status(400).json({ error: "Name, email, and password are all required." });
     }
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password kam se kam 6 characters ka hona chahiye." });
+      return res.status(400).json({ error: "Password must be at least 6 characters long." });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Is email se pehle hi account bana hua hai." });
+      return res.status(409).json({ error: "An account with this email already exists." });
     }
 
     // Hash the password — plain text passwords are NEVER stored
@@ -39,13 +39,13 @@ router.post("/signup", async (req, res) => {
     );
 
     res.status(201).json({
-      message: "Account successfully create ho gaya.",
+      message: "Account created successfully.",
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 
@@ -58,17 +58,17 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email aur password dono zaroori hain." });
+      return res.status(400).json({ error: "Email and password are both required." });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(401).json({ error: "Email ya password ghalat hai." });
+      return res.status(401).json({ error: "Incorrect email or password." });
     }
 
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatches) {
-      return res.status(401).json({ error: "Email ya password ghalat hai." });
+      return res.status(401).json({ error: "Incorrect email or password." });
     }
 
     await prisma.user.update({
@@ -89,7 +89,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 
