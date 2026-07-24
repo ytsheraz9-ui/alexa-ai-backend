@@ -17,7 +17,9 @@ model User {
   passwordHash String
   role         String   @default("user") // "user" or "admin"
   memory       String   @default("") // Long-term facts learned about this user across conversations
-  lastLoginAt  DateTime?
+  lastLoginAt      DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

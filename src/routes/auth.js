@@ -94,3 +94,73 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+const crypto = require("crypto");
+const { sendResetEmail } = require("../lib/mailer");
+
+// ---------------------------------------------
+// POST /api/auth/forgot-password
+// Email pe reset link bhejta hai (agar account exist karta hai)
+// ---------------------------------------------
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email zaroori hai." });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Security: chahe user exist kare ya na kare, hamesha same success message do
+    // (isse attacker ko pata nahi chalta ke kaunsa email registered hai)
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { resetToken: hashedToken, resetTokenExpiry: expiry }
+      });
+
+      const resetLink = `${process.env.FRONTEND_URL}/reset-password.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
+      await sendResetEmail(email, resetLink);
+    }
+
+    res.json({ message: "Agar ye email registered hai, reset link bhej diya gaya hai." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error. Baad mein try karein." });
+  }
+});
+
+// ---------------------------------------------
+// POST /api/auth/reset-password
+// Token verify karke naya password set karta hai
+// ---------------------------------------------
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ error: "Sab fields zaroori hain." });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Password kam se kam 6 characters ka hona chahiye." });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.resetToken !== hashedToken || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      return res.status(400).json({ error: "Link invalid ya expire ho chuka hai. Dobara reset request karein." });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetToken: null, resetTokenExpiry: null }
+    });
+
+    res.json({ message: "Password successfully reset ho gaya. Ab login karein." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error. Baad mein try karein." });
+  }
+});

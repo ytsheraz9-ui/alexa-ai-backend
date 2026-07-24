@@ -11,9 +11,25 @@ const { generalLimiter, authLimiter } = require("./middleware/rateLimit");
 
 const app = express();
 
-// CORS — allows the frontend (local file, or your deployed Netlify site) to call this API.
-// For production, you can restrict this to your exact Netlify domain instead of "*".
-app.use(cors());
+// CORS — sirf apne actual frontend domains se requests allow karo.
+// "your-netlify-site" ki jagah apna asli Netlify URL daalna zaroori hai.
+const allowedOrigins = [
+  "https://alexa-ai-1.netlify.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:5500"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Postman/curl jaise tools mein origin nahi hota — unhe allow rehne do
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS: Ye domain allowed nahi hai"));
+    }
+  },
+  credentials: true
+}));
 
 app.use(express.json({ limit: "5mb" })); // 5mb limit to allow base64 images later
 
