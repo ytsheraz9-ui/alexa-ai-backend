@@ -10,6 +10,7 @@ const { requireAuth } = require("./middleware/auth");
 const { generalLimiter, authLimiter } = require("./middleware/rateLimit");
 
 const app = express();
+app.set("trust proxy", 1);
 
 // CORS — sirf apne actual frontend domains se requests allow karo.
 // "your-netlify-site" ki jagah apna asli Netlify URL daalna zaroori hai.
