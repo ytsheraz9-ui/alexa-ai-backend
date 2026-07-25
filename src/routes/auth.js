@@ -1,7 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const prisma = require("../lib/prisma");
+const { sendResetEmail } = require("../lib/mailer");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -93,23 +96,19 @@ router.post("/login", async (req, res) => {
   }
 });
 
-module.exports = router;
-const crypto = require("crypto");
-const { sendResetEmail } = require("../lib/mailer");
-
 // ---------------------------------------------
 // POST /api/auth/forgot-password
-// Email pe reset link bhejta hai (agar account exist karta hai)
+// Sends a password reset link to the user's email (if the account exists)
 // ---------------------------------------------
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email zaroori hai." });
+    if (!email) return res.status(400).json({ error: "Email is required." });
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Security: chahe user exist kare ya na kare, hamesha same success message do
-    // (isse attacker ko pata nahi chalta ke kaunsa email registered hai)
+    // Security: always return the same success message whether or not the
+    // account exists, so an attacker can't use this to discover registered emails.
     if (user) {
       const rawToken = crypto.randomBytes(32).toString("hex");
       const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -124,32 +123,32 @@ router.post("/forgot-password", async (req, res) => {
       await sendResetEmail(email, resetLink);
     }
 
-    res.json({ message: "Agar ye email registered hai, reset link bhej diya gaya hai." });
+    res.json({ message: "If this email is registered, a reset link has been sent." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 
 // ---------------------------------------------
 // POST /api/auth/reset-password
-// Token verify karke naya password set karta hai
+// Verifies the reset token and sets a new password
 // ---------------------------------------------
 router.post("/reset-password", async (req, res) => {
   try {
     const { email, token, newPassword } = req.body;
     if (!email || !token || !newPassword) {
-      return res.status(400).json({ error: "Sab fields zaroori hain." });
+      return res.status(400).json({ error: "All fields are required." });
     }
     if (newPassword.length < 6) {
-      return res.status(400).json({ error: "Password kam se kam 6 characters ka hona chahiye." });
+      return res.status(400).json({ error: "Password must be at least 6 characters long." });
     }
 
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || user.resetToken !== hashedToken || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
-      return res.status(400).json({ error: "Link invalid ya expire ho chuka hai. Dobara reset request karein." });
+      return res.status(400).json({ error: "This link is invalid or has expired. Please request a new one." });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
@@ -158,9 +157,28 @@ router.post("/reset-password", async (req, res) => {
       data: { passwordHash, resetToken: null, resetTokenExpiry: null }
     });
 
-    res.json({ message: "Password successfully reset ho gaya. Ab login karein." });
+    res.json({ message: "Your password has been reset successfully." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
+
+// ---------------------------------------------
+// DELETE /api/auth/delete-account
+// Permanently deletes the logged-in user's account and all related data.
+// Requires a valid auth token — a user can only delete their own account.
+// ---------------------------------------------
+router.delete("/delete-account", requireAuth, async (req, res) => {
+  try {
+    await prisma.user.delete({
+      where: { id: req.user.userId }
+    });
+    res.json({ message: "Your account has been permanently deleted." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete account. Please try again later." });
+  }
+});
+
+module.exports = router;
