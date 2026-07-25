@@ -7,7 +7,8 @@ const generalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Bohat zyada requests bhej di hain. Thori der baad try karein." }
+  message: { error: "Too many requests have been sent. Please try again after some time." }
+
 });
 
 // Stricter limiter for auth routes (signup/login) — prevents brute-force
@@ -17,7 +18,7 @@ const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Bohat zyada login/signup attempts. 15 minute baad try karein." }
+  message: { error: "Too many login/signup attempts. Please try again after 15 minutes." }
 });
 
 // Chat/AI limiter — this is the most important one. It protects the Groq
@@ -29,7 +30,8 @@ const chatLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user?.userId || req.ip, // per-user if logged in, else per-IP
-  message: { error: "AI se bohat zyada messages bhej diye hain. 5 minute baad try karein." }
+  message: { error: "You have sent too many messages to the AI. Please try again in 5 minutes." }
+
 });
 
 module.exports = { generalLimiter, authLimiter, chatLimiter };

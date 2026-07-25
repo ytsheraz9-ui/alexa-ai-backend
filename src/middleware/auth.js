@@ -18,14 +18,14 @@ function requireAuth(req, res, next) {
     req.user = decoded; // { userId, role }
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Session expired ya token invalid hai. Dobara login karein." });
+    return res.status(401).json({ error: "Invalid or expired token." });
   }
 }
 
 // Optional: restricts a route to admin-role users only
 function requireAdmin(req, res, next) {
   if (req.user?.role !== "admin") {
-    return res.status(403).json({ error: "Sirf admin ye kaam kar sakta hai." });
+    return res.status(403).json({ error: "Access denied. Admin privileges required." });
   }
   next();
 }

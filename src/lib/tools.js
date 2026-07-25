@@ -10,11 +10,12 @@ const TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "get_weather",
-      description: "Kisi bhi shehar/location ka current weather aur temperature batata hai. Jab bhi user weather, mausam, temperature, barish, dhoop waghera ke baare mein poochay, ye function zaroor use karo.",
+      description: "Provides the current weather conditions and temperature for any city or location. Whenever a user asks about the weather, climate, temperature, rain, sunshine, or related conditions, this function must always be used.",
+
       parameters: {
         type: "object",
         properties: {
-          city: { type: "string", description: "Shehar ka naam, jaise 'Rahim Yar Khan', 'Lahore', 'Karachi'" }
+          city: { type: "string", description: "name of city, example 'Rahim Yar Khan', 'Lahore', 'Karachi'" }
         },
         required: ["city"]
       }
@@ -24,11 +25,11 @@ const TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "web_search",
-      description: "Internet pe current/latest information dhoondta hai — jaise breaking news, sports scores, stock prices, ya koi bhi cheez jo tumhare training data ke baad hui ho ya jo hamesha badalti rehti hai. Jab bhi user 'latest', 'aaj kal', 'current', 'abhi' jaisi cheezein poochay jo tumhein pata na ho, ye use karo.",
+      description: "Searches the internet for the latest information — such as breaking news, sports scores, stock prices, or any other topic that may not be in the AI's training data. Use this function when a user asks about current events or information they are unsure about.",
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Search query — jo cheez dhoondni hai" }
+          query: { type: "string", description: "Search query — the topic you want to search for" }
         },
         required: ["query"]
       }
@@ -45,7 +46,7 @@ async function getWeather(city) {
     );
     const geoData = await geoRes.json();
     if (!geoData.results || geoData.results.length === 0) {
-      return `"${city}" naam ki location nahi mili.`;
+      return `Location for "${city}" not found.`;
     }
     const { latitude, longitude, name, country } = geoData.results[0];
 
@@ -67,19 +68,19 @@ async function getWeather(city) {
     return JSON.stringify({
       location: `${name}, ${country}`,
       temperature_celsius: cur.temperature_2m,
-      condition: weatherDescriptions[cur.weather_code] || "Namaloom",
+      condition: weatherDescriptions[cur.weather_code] || "unknown",
       humidity_percent: cur.relative_humidity_2m,
       wind_speed_kmh: cur.wind_speed_10m
     });
   } catch (err) {
-    return `Weather data lene mein error hua: ${err.message}`;
+    return `Error fetching weather data: ${err.message}`;
   }
 }
 
 // ---- web_search implementation (Tavily — free tier, AI-optimized results) ----
 async function webSearch(query) {
   if (!process.env.TAVILY_API_KEY) {
-    return "Web search abhi configure nahi hui (TAVILY_API_KEY missing).";
+    return "Web search is not configured (TAVILY_API_KEY missing).";
   }
   try {
     const res = await fetch("https://api.tavily.com/search", {
@@ -105,7 +106,7 @@ async function webSearch(query) {
       sources: (data.results || []).slice(0, 4).map(r => ({ title: r.title, content: r.content, url: r.url }))
     });
   } catch (err) {
-    return `Web search mein error hua: ${err.message}`;
+    return `Error fetching web search results: ${err.message}`;
   }
 }
 
