@@ -1,9 +1,9 @@
 const nodemailer = require("nodemailer");
 
+// Gmail use kar rahe ho to: Gmail Settings -> Security -> 2-Step Verification -> App Passwords
+// se ek "App Password" banao (apna normal Gmail password use MAT karo)
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // STARTTLS, not SSL — required for port 587
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_APP_PASSWORD
@@ -18,9 +18,9 @@ async function sendResetEmail(toEmail, resetLink) {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto;">
         <h2>Password Reset</h2>
-        <p>You requested to reset your password. Click the button below to continue:</p>
+        <p>Aapne apna password reset karne ki request ki hai. Neeche diye button pe click karein:</p>
         <a href="${resetLink}" style="display:inline-block; background:#4f46e5; color:#fff; padding:12px 24px; border-radius:8px; text-decoration:none; margin:16px 0;">Reset Password</a>
-        <p style="color:#666; font-size:13px;">This link will expire in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
+        <p style="color:#666; font-size:13px;">Ye link 15 minute mein expire ho jayega. Agar aapne ye request nahi ki, is email ko ignore kar dein.</p>
       </div>
     `
   });
