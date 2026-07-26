@@ -50,7 +50,7 @@ router.get("/users", async (req, res) => {
     res.json({ status: "ok", users: usersWithMessageCounts });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 

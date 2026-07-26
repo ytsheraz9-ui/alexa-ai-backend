@@ -23,7 +23,7 @@ router.post("/generate", requireAuth, chatLimiter, async (req, res) => {
     const { messages, model, maxTokens } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "Messages array zaroori hai." });
+      return res.status(400).json({ error: "Messages array is required." });
     }
 
     const modelName = GROQ_MODELS[model] || GROQ_MODELS["llama-3.3-70b"];
@@ -46,14 +46,14 @@ router.post("/generate", requireAuth, chatLimiter, async (req, res) => {
 
     if (!groqRes.ok) {
       console.error("Groq API error:", groqData);
-      return res.status(502).json({ error: "AI se jawab lene mein masla hua. Dobara try karein." });
+      return res.status(502).json({ error: "There was a problem getting a reply from the AI. Please try again." });
     }
 
-    const reply = groqData.choices?.[0]?.message?.content || "Jawab nahi mila.";
+    const reply = groqData.choices?.[0]?.message?.content || "No response was received.";
     res.json({ status: "ok", reply });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error. Baad mein try karein." });
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 

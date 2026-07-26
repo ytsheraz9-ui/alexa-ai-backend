@@ -23,7 +23,7 @@ async function extractAndSaveMemory(userId, userMessage) {
         messages: [
           {
             role: "system",
-            content: "Tum ek memory-extraction assistant ho. User ke message ko dekho aur decide karo kya usme koi LASTING fact hai jo user ke baare mein hamesha yaad rakhna chahiye — jaise unka naam, job, shehar, pasand-napasand, family details, ongoing project, ya koi aisi cheez jo future conversations mein kaam aaye. Agar haan, to sirf wo fact EK CHOTI LINE mein third-person mein likho (jaise 'User ka naam Ali hai' ya 'User Lahore mein rehta hai'). Agar koi aisi lasting fact nahi hai (sirf casual chat, sawal-jawab, ya generic baat hai), to sirf 'NONE' likho. Kuch aur mat likho."
+            content: "You are a memory-extraction assistant. Look at the user's message and decide whether it contains a LASTING fact worth remembering long-term about the user — such as their name, job, city, likes/dislikes, family details, an ongoing project, or anything else useful in future conversations. If so, write ONLY that fact as ONE SHORT LINE in third person, in English (e.g. 'The user's name is Ali' or 'The user lives in Lahore'). If there is no such lasting fact (just casual chat, a question, or something generic), write only 'NONE'. Do not write anything else."
           },
           { role: "user", content: userMessage }
         ]

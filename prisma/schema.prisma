@@ -20,6 +20,10 @@ model User {
   lastLoginAt  DateTime?
   resetToken       String?
   resetTokenExpiry DateTime?
+  plan                String    @default("free") // "free" or "pro"
+  subscriptionId      String?
+  subscriptionStatus  String?
+  subscriptionEndsAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
