@@ -97,6 +97,23 @@ router.post("/", requireAuth, chatLimiter, async (req, res) => {
       return res.status(400).json({ error: "Message khali nahi ho sakta." });
     }
 
+    // ---- Free-tier daily limit check ----
+    const FREE_DAILY_LIMIT = 20;
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { plan: true } });
+
+    if (user.plan !== "pro") {
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const messagesToday = await prisma.message.count({
+        where: { role: "user", session: { userId: req.user.userId }, createdAt: { gte: startOfDay } }
+      });
+      if (messagesToday >= FREE_DAILY_LIMIT) {
+        return res.status(403).json({
+          error: `Aapki free plan ki daily limit (${FREE_DAILY_LIMIT} messages) khatam ho gayi hai. Unlimited access ke liye Pro plan le lein.`,
+          upgradeRequired: true
+        });
+      }
+    }
+
     const modelName = GROQ_MODELS[model] || GROQ_MODELS["llama-3.3-70b"];
 
     // Find existing session, or create a new one for this user

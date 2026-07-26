@@ -8,11 +8,16 @@ const generateRoutes = require("./routes/generate");
 const adminRoutes = require("./routes/admin");
 const todoRoutes = require("./routes/todos");
 const noteRoutes = require("./routes/notes");
+const { router: billingRoutes, webhookHandler } = require("./routes/billing");
 const { requireAuth } = require("./middleware/auth");
 const { generalLimiter, authLimiter } = require("./middleware/rateLimit");
 
 const app = express();
 app.set("trust proxy", 1);
+
+// Paddle webhook needs the RAW (unparsed) body to verify its signature,
+// so this must be mounted BEFORE express.json() below.
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), webhookHandler);
 
 // CORS — sirf apne actual frontend domains se requests allow karo.
 // "your-netlify-site" ki jagah apna asli Netlify URL daalna zaroori hai.
@@ -28,7 +33,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("CORS:  domain is not allowed"));
+      callback(new Error("CORS: Ye domain allowed nahi hai"));
     }
   },
   credentials: true
@@ -80,6 +85,9 @@ app.use("/api/admin", adminRoutes);
 // Todos & Notes — real database persistence (replaces LocalStorage)
 app.use("/api/todos", todoRoutes);
 app.use("/api/notes", noteRoutes);
+
+// Billing — plan status + Paddle checkout info (webhook is mounted separately above)
+app.use("/api/billing", billingRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
