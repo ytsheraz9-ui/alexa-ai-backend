@@ -4,6 +4,7 @@ const { requireAuth } = require("../middleware/auth");
 const { chatLimiter } = require("../middleware/rateLimit");
 const { TOOLS_SCHEMA, executeTool } = require("../lib/tools");
 const { extractAndSaveMemory } = require("../lib/memory");
+const { checkContentSafety } = require("../lib/contentSafety");
 
 const router = express.Router();
 
@@ -101,6 +102,13 @@ router.post("/", requireAuth, chatLimiter, async (req, res) => {
 
     if ((!message || !message.trim()) && !image) {
       return res.status(400).json({ error: "Message cannot be empty." });
+    }
+
+    // ---- Content safety check (runs before any AI call) ----
+    const safetyCheck = checkContentSafety(message);
+    if (!safetyCheck.safe) {
+      console.log(`🛑 Content safety filter blocked a message from user ${req.user.userId}`);
+      return res.status(200).json({ status: "ok", sessionId: sessionId || null, reply: safetyCheck.reason });
     }
 
     // ---- Free-tier daily limit check ----

@@ -1,8 +1,13 @@
+// Load environment variables first so Sentry can read SENTRY_DSN,
+// then load Sentry before any other module so it can instrument everything.
 require("dotenv").config();
+const Sentry = require("./instrument");
+
 const express = require("express");
 const cors = require("cors");
 const prisma = require("./lib/prisma");
 const authRoutes = require("./routes/auth");
+const twoFactorRoutes = require("./routes/twoFactor");
 const chatRoutes = require("./routes/chat");
 const generateRoutes = require("./routes/generate");
 const adminRoutes = require("./routes/admin");
@@ -62,6 +67,7 @@ app.get("/api/db-check", async (req, res) => {
 // Auth routes: /api/auth/signup, /api/auth/login
 // authLimiter adds extra brute-force protection specifically for these routes
 app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth/2fa", authLimiter, twoFactorRoutes);
 
 // Protected test route — only accessible with a valid login token.
 // Use this to confirm the auth system works end-to-end.
@@ -88,6 +94,10 @@ app.use("/api/notes", noteRoutes);
 
 // Billing — plan status + Paddle checkout info (webhook is mounted separately above)
 app.use("/api/billing", billingRoutes);
+
+// Sentry error handler — must come after all routes, so it can catch anything
+// that went wrong in them, but before app.listen starts the server.
+Sentry.setupExpressErrorHandler(app);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
