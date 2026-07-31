@@ -6,7 +6,6 @@ const router = express.Router();
 
 router.use(requireAuth); // every route here requires login
 
-// GET /api/notes — list this user's notes
 router.get("/", async (req, res) => {
   const notes = await prisma.note.findMany({
     where: { userId: req.user.userId },
@@ -15,7 +14,6 @@ router.get("/", async (req, res) => {
   res.json({ status: "ok", notes });
 });
 
-// POST /api/notes — create a new note
 router.post("/", async (req, res) => {
   const { title, content } = req.body;
   if (!content || !content.trim()) return res.status(400).json({ error: "Note content is required." });
@@ -26,7 +24,6 @@ router.post("/", async (req, res) => {
   res.status(201).json({ status: "ok", note });
 });
 
-// PATCH /api/notes/:id — edit a note
 router.patch("/:id", async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.user.userId } });
   if (!note) return res.status(404).json({ error: "Note not found." });
@@ -39,7 +36,6 @@ router.patch("/:id", async (req, res) => {
   res.json({ status: "ok", note: updated });
 });
 
-// DELETE /api/notes/:id
 router.delete("/:id", async (req, res) => {
   const note = await prisma.note.findFirst({ where: { id: req.params.id, userId: req.user.userId } });
   if (!note) return res.status(404).json({ error: "Note not found." });

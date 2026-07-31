@@ -4,13 +4,8 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
-// All routes here require a logged-in admin (role: "admin")
 router.use(requireAuth, requireAdmin);
 
-// ---------------------------------------------
-// GET /api/admin/users
-// Returns every user with real usage stats — no fake/localStorage data.
-// ---------------------------------------------
 router.get("/users", async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -26,7 +21,6 @@ router.get("/users", async (req, res) => {
       }
     });
 
-    // Count actual messages sent by each user (across all their chat sessions)
     const usersWithMessageCounts = await Promise.all(
       users.map(async (u) => {
         const messageCount = await prisma.message.count({
@@ -54,10 +48,6 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// GET /api/admin/users/:id/sessions
-// Lists a specific user's chat session titles (for the admin to inspect activity)
-// ---------------------------------------------
 router.get("/users/:id/sessions", async (req, res) => {
   try {
     const sessions = await prisma.chatSession.findMany({

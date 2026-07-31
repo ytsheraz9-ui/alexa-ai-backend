@@ -5,11 +5,6 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ---------------------------------------------
-// GET /api/billing/status
-// Returns the logged-in user's current plan — used by the frontend
-// to show "Free" vs "Pro", and to unlock/lock features accordingly.
-// ---------------------------------------------
 router.get("/status", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.userId },
@@ -18,11 +13,6 @@ router.get("/status", requireAuth, async (req, res) => {
   res.json({ status: "ok", ...user });
 });
 
-// ---------------------------------------------
-// GET /api/billing/checkout-info
-// Gives the frontend what it needs to open the Paddle checkout overlay
-// (the price ID + a client token). No secret key is ever sent to the browser.
-// ---------------------------------------------
 router.get("/checkout-info", requireAuth, async (req, res) => {
   if (!process.env.PADDLE_CLIENT_TOKEN || !process.env.PADDLE_PRICE_ID_PRO) {
     return res.status(503).json({ error: "Payments are not configured yet." });
@@ -35,16 +25,6 @@ router.get("/checkout-info", requireAuth, async (req, res) => {
   });
 });
 
-// ---------------------------------------------
-// POST /api/billing/webhook
-// Paddle calls this automatically whenever a subscription is created,
-// renewed, canceled, or payment fails. This is what actually upgrades
-// or downgrades a user's plan — never trust the frontend for this.
-//
-// IMPORTANT: this handler must receive the RAW request body (not JSON-parsed)
-// so the signature can be verified. It's mounted separately in index.js,
-// BEFORE the app's normal express.json() middleware runs.
-// ---------------------------------------------
 async function webhookHandler(req, res) {
   try {
     const signature = req.headers["paddle-signature"];
@@ -55,7 +35,6 @@ async function webhookHandler(req, res) {
       return res.status(500).send("Webhook not configured");
     }
 
-    // Verify the webhook really came from Paddle (prevents fake "payment success" calls)
     const [tsPart, h1Part] = signature.split(";");
     const timestamp = tsPart.split("=")[1];
     const receivedHash = h1Part.split("=")[1];
@@ -71,7 +50,6 @@ async function webhookHandler(req, res) {
     const eventType = event.event_type;
     const data = event.data;
 
-    // The email is how we match a Paddle customer back to our own user account
     const customerEmail = data?.customer?.email || data?.customer_email;
 
     if (eventType === "subscription.created" || eventType === "subscription.updated") {

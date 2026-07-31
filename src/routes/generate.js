@@ -12,12 +12,6 @@ const GROQ_MODELS = {
   "kimi-k2": "moonshotai/kimi-k2"
 };
 
-// ---------------------------------------------
-// POST /api/ai/generate
-// Generic, stateless AI proxy — used by all one-shot feature tools
-// (resume builder, email writer, translator, etc). Does NOT save to DB.
-// Protected: requires login + rate-limited.
-// ---------------------------------------------
 router.post("/generate", requireAuth, chatLimiter, async (req, res) => {
   try {
     const { messages, model, maxTokens } = req.body;

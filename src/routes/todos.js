@@ -4,9 +4,8 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.use(requireAuth); // every route here requires login
+router.use(requireAuth);
 
-// GET /api/todos — list this user's tasks
 router.get("/", async (req, res) => {
   const todos = await prisma.todo.findMany({
     where: { userId: req.user.userId },
@@ -15,7 +14,6 @@ router.get("/", async (req, res) => {
   res.json({ status: "ok", todos });
 });
 
-// POST /api/todos — create a new task
 router.post("/", async (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) return res.status(400).json({ error: "Task text is required." });
@@ -26,7 +24,6 @@ router.post("/", async (req, res) => {
   res.status(201).json({ status: "ok", todo });
 });
 
-// PATCH /api/todos/:id — toggle done / edit text
 router.patch("/:id", async (req, res) => {
   const todo = await prisma.todo.findFirst({ where: { id: req.params.id, userId: req.user.userId } });
   if (!todo) return res.status(404).json({ error: "Task not found." });
@@ -39,7 +36,6 @@ router.patch("/:id", async (req, res) => {
   res.json({ status: "ok", todo: updated });
 });
 
-// DELETE /api/todos/:id
 router.delete("/:id", async (req, res) => {
   const todo = await prisma.todo.findFirst({ where: { id: req.params.id, userId: req.user.userId } });
   if (!todo) return res.status(404).json({ error: "Task not found." });

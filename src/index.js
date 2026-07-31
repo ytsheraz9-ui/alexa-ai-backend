@@ -1,5 +1,3 @@
-// Load environment variables first so Sentry can read SENTRY_DSN,
-// then load Sentry before any other module so it can instrument everything.
 require("dotenv").config();
 const Sentry = require("./instrument");
 
@@ -20,12 +18,8 @@ const { generalLimiter, authLimiter } = require("./middleware/rateLimit");
 const app = express();
 app.set("trust proxy", 1);
 
-// Paddle webhook needs the RAW (unparsed) body to verify its signature,
-// so this must be mounted BEFORE express.json() below.
 app.post("/api/billing/webhook", express.raw({ type: "application/json" }), webhookHandler);
 
-// CORS — sirf apne actual frontend domains se requests allow karo.
-// "your-netlify-site" ki jagah apna asli Netlify URL daalna zaroori hai.
 const allowedOrigins = [
   "https://alexa-ai-1.netlify.app",
   "http://localhost:3000",
@@ -46,15 +40,12 @@ app.use(cors({
 
 app.use(express.json({ limit: "5mb" })); // 5mb limit to allow base64 images later
 
-// General rate limit — applies to every request as basic abuse protection
 app.use(generalLimiter);
 
-// Health check — confirms server is running
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Alexa AI backend is running" });
 });
 
-// DB check — confirms the database connection itself works
 app.get("/api/db-check", async (req, res) => {
   try {
     const userCount = await prisma.user.count();
@@ -64,13 +55,9 @@ app.get("/api/db-check", async (req, res) => {
   }
 });
 
-// Auth routes: /api/auth/signup, /api/auth/login
-// authLimiter adds extra brute-force protection specifically for these routes
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/auth/2fa", authLimiter, twoFactorRoutes);
 
-// Protected test route — only accessible with a valid login token.
-// Use this to confirm the auth system works end-to-end.
 app.get("/api/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.userId },
@@ -79,24 +66,17 @@ app.get("/api/me", requireAuth, async (req, res) => {
   res.json({ status: "ok", user });
 });
 
-// Chat routes: /api/chat (send message), /api/chat/sessions (history)
 app.use("/api/chat", chatRoutes);
 
-// Generic AI routes: /api/ai/generate (used by resume, email, and other one-shot tools)
 app.use("/api/ai", generateRoutes);
 
-// Admin-only routes: /api/admin/users (real analytics dashboard data)
 app.use("/api/admin", adminRoutes);
 
-// Todos & Notes — real database persistence (replaces LocalStorage)
 app.use("/api/todos", todoRoutes);
 app.use("/api/notes", noteRoutes);
 
-// Billing — plan status + Paddle checkout info (webhook is mounted separately above)
 app.use("/api/billing", billingRoutes);
 
-// Sentry error handler — must come after all routes, so it can catch anything
-// that went wrong in them, but before app.listen starts the server.
 Sentry.setupExpressErrorHandler(app);
 
 const PORT = process.env.PORT || 4000;

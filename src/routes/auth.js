@@ -8,10 +8,6 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ---------------------------------------------
-// POST /api/auth/signup
-// Creates a new user with a securely hashed password
-// ---------------------------------------------
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -28,7 +24,6 @@ router.post("/signup", async (req, res) => {
       return res.status(409).json({ error: "An account with this email already exists." });
     }
 
-    // Hash the password — plain text passwords are NEVER stored
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
@@ -52,10 +47,6 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/login
-// Verifies credentials and issues a JWT token
-// ---------------------------------------------
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -96,10 +87,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/forgot-password
-// Sends a password reset link to the user's email (if the account exists)
-// ---------------------------------------------
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
@@ -107,8 +94,6 @@ router.post("/forgot-password", async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Security: always return the same success message whether or not the
-    // account exists, so an attacker can't use this to discover registered emails.
     if (user) {
       const rawToken = crypto.randomBytes(32).toString("hex");
       const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -130,10 +115,6 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/reset-password
-// Verifies the reset token and sets a new password
-// ---------------------------------------------
 router.post("/reset-password", async (req, res) => {
   try {
     const { email, token, newPassword } = req.body;
@@ -164,11 +145,6 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// DELETE /api/auth/delete-account
-// Permanently deletes the logged-in user's account and all related data.
-// Requires a valid auth token — a user can only delete their own account.
-// ---------------------------------------------
 router.delete("/delete-account", requireAuth, async (req, res) => {
   try {
     await prisma.user.delete({

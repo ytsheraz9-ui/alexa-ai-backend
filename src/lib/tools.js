@@ -1,10 +1,3 @@
-// ============================================================
-// AI TOOLS — Real-time data the AI can fetch when it needs to.
-// This is what makes weather/news/current-events questions accurate,
-// instead of the AI just guessing from its training data.
-// ============================================================
-
-// ---- Tool definitions (told to Groq so it knows what it can call) ----
 const TOOLS_SCHEMA = [
   {
     type: "function",
@@ -37,10 +30,8 @@ const TOOLS_SCHEMA = [
   }
 ];
 
-// ---- get_weather implementation (Open-Meteo — free, no API key needed) ----
 async function getWeather(city) {
   try {
-    // Step 1: convert city name to coordinates
     const geoRes = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`
     );
@@ -50,7 +41,6 @@ async function getWeather(city) {
     }
     const { latitude, longitude, name, country } = geoData.results[0];
 
-    // Step 2: fetch current weather for those coordinates
     const weatherRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
     );
@@ -77,7 +67,6 @@ async function getWeather(city) {
   }
 }
 
-// ---- web_search implementation (Tavily — free tier, AI-optimized results) ----
 async function webSearch(query) {
   if (!process.env.TAVILY_API_KEY) {
     return "Web search is not configured (TAVILY_API_KEY missing).";
@@ -110,7 +99,6 @@ async function webSearch(query) {
   }
 }
 
-// ---- Dispatcher — runs whichever tool the AI decided to call ----
 async function executeTool(name, args) {
   if (name === "get_weather") return getWeather(args.city);
   if (name === "web_search") return webSearch(args.query);

@@ -1,6 +1,3 @@
-// Alexa AI - Database Schema
-// This replaces browser LocalStorage with permanent, multi-device storage.
-
 generator client {
   provider = "prisma-client-js"
 }

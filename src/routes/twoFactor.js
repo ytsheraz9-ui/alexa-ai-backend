@@ -7,13 +7,6 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ---------------------------------------------
-// POST /api/auth/2fa/setup
-// Generates a new TOTP secret and a QR code for the user to scan with an
-// authenticator app (Google Authenticator, Authy, etc). This does NOT enable
-// 2FA yet — the user must confirm with a valid code via /enable first, so an
-// account can never get locked out by a half-finished setup.
-// ---------------------------------------------
 router.post("/setup", requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
@@ -35,11 +28,6 @@ router.post("/setup", requireAuth, async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/2fa/enable
-// Confirms setup by checking a code from the authenticator app against the
-// pending secret. Only after this succeeds does 2FA actually turn on.
-// ---------------------------------------------
 router.post("/enable", requireAuth, async (req, res) => {
   try {
     const { code } = req.body;
@@ -66,10 +54,6 @@ router.post("/enable", requireAuth, async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/2fa/disable
-// Turns 2FA off and clears the stored secret.
-// ---------------------------------------------
 router.post("/disable", requireAuth, async (req, res) => {
   try {
     await prisma.user.update({
@@ -83,12 +67,6 @@ router.post("/disable", requireAuth, async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// POST /api/auth/2fa/verify-login
-// Completes a login that was paused for 2FA. Takes the short-lived tempToken
-// issued by /login, plus the code from the authenticator app, and — if valid —
-// issues the real, full session token.
-// ---------------------------------------------
 router.post("/verify-login", async (req, res) => {
   try {
     const { tempToken, code } = req.body;
@@ -133,10 +111,6 @@ router.post("/verify-login", async (req, res) => {
   }
 });
 
-// ---------------------------------------------
-// GET /api/auth/2fa/status
-// Tells the frontend whether 2FA is currently on for this account.
-// ---------------------------------------------
 router.get("/status", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { twoFactorEnabled: true } });
   res.json({ status: "ok", enabled: !!user.twoFactorEnabled });

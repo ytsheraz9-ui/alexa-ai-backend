@@ -1,13 +1,7 @@
-// ============================================================
-// USER MEMORY — Extracts durable facts from conversations and
-// remembers them across sessions, similar to Claude's memory feature.
-// ============================================================
 const prisma = require("./prisma");
 
 const MAX_MEMORY_FACTS = 30; // cap so memory doesn't grow forever
 
-// Uses a small, fast model to check if the user's message contains
-// a fact worth remembering long-term (name, job, preferences, etc).
 async function extractAndSaveMemory(userId, userMessage) {
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -38,7 +32,6 @@ async function extractAndSaveMemory(userId, userMessage) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { memory: true } });
     let facts = (user?.memory || "").split("\n").filter(Boolean);
 
-    // Avoid saving near-duplicate facts
     if (facts.some(f => f.toLowerCase() === fact.toLowerCase())) return;
 
     facts.push(fact);
@@ -49,7 +42,6 @@ async function extractAndSaveMemory(userId, userMessage) {
       data: { memory: facts.join("\n") }
     });
   } catch (err) {
-    // Memory extraction is a "nice to have" — never break the chat if it fails
     console.error("Memory extraction failed:", err.message);
   }
 }
